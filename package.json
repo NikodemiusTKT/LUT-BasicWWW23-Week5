@@ -1,0 +1,31 @@
+{
+  "name": "lut-basicwww23-week5",
+  "version": "1.0.0",
+  "description": "Week 5 exercise for LUT Introduction to Web Programming course.",
+  "source": "index.html",
+  "scripts": {
+    "start": "parcel",
+    "build": "parcel build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NikodemiusTKT/LUT-BasicWWW23-Week5.git"
+  },
+  "keywords": [
+    "lut",
+    "university",
+    "web",
+    "course",
+    "exercise",
+    "assignment"
+  ],
+  "author": "Teemu Tanninen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/NikodemiusTKT/LUT-BasicWWW23-Week5/issues"
+  },
+  "homepage": "https://github.com/NikodemiusTKT/LUT-BasicWWW23-Week5#readme",
+  "devDependencies": {
+    "parcel": "^2.9.3"
+  }
+}
