@@ -44,26 +44,34 @@ async function fetchJsonData(url) {
  * @returns {Promise<{geoJsonData: Object|null, migrationData: Object|null}>} - An object containing geoJsonData and migrationData.
  */
 async function getData() {
-  let geoJsonData = JSON.parse(sessionStorage.getItem("geoJsonData"));
-  let migrationData = JSON.parse(sessionStorage.getItem("migrationData"));
+  const geoJsonData = JSON.parse(sessionStorage.getItem("geoJsonData"));
+  const migrationData = JSON.parse(sessionStorage.getItem("migrationData"));
+
+  if (geoJsonData && migrationData) {
+    return { geoJsonData, migrationData };
+  }
 
   // Fetch data if not available in session storage
-  if (geoJsonData === null || migrationData === null) {
-    const [immigrationData, emigrationData, geoJsonData] = await Promise.all(
-      fetchJsonData(urls.immigrationUrl),
-      fetchJsonData(urls.emigrationUrl),
-      fetchJsonData(urls.geoJsonUrl)
-    );
+  const [immigrationData, emigrationData, geoJson] = await Promise.all(
+    fetchJsonData(urls.immigrationUrl),
+    fetchJsonData(urls.emigrationUrl),
+    fetchJsonData(urls.geoJsonUrl)
+  );
 
-    // if data fetching fails set returned data entries to null
-    if (!immigrationData || !emigrationData || !geoJsonData)
-      return { geoJsonData: null, migrationData: null };
+  // if data fetching fails set returned data entries to null
+  if (!immigrationData || !emigrationData || !geoJsonData)
+    return { geoJsonData: null, migrationData: null };
 
-    migrationData = formatMigrationData(immigrationData, emigrationData);
-    sessionStorage.setItem("geoJsonData", JSON.stringify(geoJsonData));
-    sessionStorage.setItem("migrationData", JSON.stringify(migrationData));
-  }
-  return { geoJsonData, migrationData };
+  const formattedMigrationData = formatMigrationData(
+    immigrationData,
+    emigrationData
+  );
+  sessionStorage.setItem("geoJsonData", JSON.stringify(geoJson));
+  sessionStorage.setItem(
+    "migrationData",
+    JSON.stringify(formattedMigrationData)
+  );
+  return { geoJsonData: geoJson, migrationData: formattedMigrationData };
 }
 /**
  * Formats immigration and emigration data into a more usable structure.
@@ -79,15 +87,18 @@ function formatMigrationData(immigrationData, emigrationData) {
   const emigrationIndexes =
     emigrationData.dataset.dimension["Lähtöalue"].category.index;
 
-  return Object.entries(immigrationIndexes).reduce((accumulator, [key, value]) => {
-    const label = key.replace(/^KU/, ""); // Remove "KU" prefix from the key
-    const emgIndex = emigrationIndexes[key]; // Get corresponding emigration index
-    accumulator[label] = {
-      immigration: immigrationValues[value],
-      emigration: emigrationValues[emgIndex],
-    };
-    return accumulator;
-  }, {});
+  return Object.entries(immigrationIndexes).reduce(
+    (accumulator, [key, value]) => {
+      const label = key.replace(/^KU/, ""); // Remove "KU" prefix from the key
+      const emgIndex = emigrationIndexes[key]; // Get corresponding emigration index
+      accumulator[label] = {
+        immigration: immigrationValues[value],
+        emigration: emigrationValues[emgIndex],
+      };
+      return accumulator;
+    },
+    {}
+  );
 }
 
 /**
