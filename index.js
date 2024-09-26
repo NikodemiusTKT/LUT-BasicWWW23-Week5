@@ -1,26 +1,15 @@
-'use strict';
+"use strict";
 const urls = {
   immigrationUrl:
-    'https://statfin.stat.fi/PxWeb/sq/4bb2c735-1dc3-4c5e-bde7-2165df85e65f',
+    "https://statfin.stat.fi/PxWeb/sq/4bb2c735-1dc3-4c5e-bde7-2165df85e65f",
   emigrationUrl:
-    'https://statfin.stat.fi/PxWeb/sq/944493ca-ea4d-4fd9-a75c-4975192f7b6e',
+    "https://statfin.stat.fi/PxWeb/sq/944493ca-ea4d-4fd9-a75c-4975192f7b6e",
   geoJsonUrl:
-    'https://geo.stat.fi/geoserver/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=tilastointialueet:kunta4500k&outputFormat=json&srsName=EPSG:4326',
+    "https://geo.stat.fi/geoserver/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=tilastointialueet:kunta4500k&outputFormat=json&srsName=EPSG:4326",
 };
 window.onload = async () => {
-  let geoJsonData = JSON.parse(sessionStorage.getItem('geoJsonData'));
-  let migrationData = JSON.parse(sessionStorage.getItem('migrationData'));
-  if (geoJsonData === null || migrationData === null) {
-    let immigrationData;
-    let emigrationData;
-    [immigrationData, emigrationData, geoJsonData] = await fetchDataSources(
-      urls
-    );
-    migrationData = formatMigrationData(immigrationData, emigrationData);
-    sessionStorage.setItem('geoJsonData', JSON.stringify(geoJsonData));
-    sessionStorage.setItem('migrationData', JSON.stringify(migrationData));
-  }
-  drawMap(geoJsonData);
+  const { geoJsonData, migrationData } = await getData();
+  drawMap(geoJsonData, migrationData);
 };
 async function fetchJsonData(url) {
   try {
@@ -28,8 +17,8 @@ async function fetchJsonData(url) {
     if (!response.ok) {
       throw new Error(`HTTP error: ${response.status}`);
     }
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
       throw new TypeError("Fetched dataset isn't JSON!");
     }
     return await response.json();
@@ -44,18 +33,34 @@ async function fetchDataSources(urls) {
   const results = await Promise.all(promises);
   return results;
 }
+
+async function getData() {
+  let geoJsonData = JSON.parse(sessionStorage.getItem("geoJsonData"));
+  let migrationData = JSON.parse(sessionStorage.getItem("migrationData"));
+  if (geoJsonData === null || migrationData === null) {
+    const [immigrationData, emigrationData, geoJsonData] = await Promise.All(
+      fetchJsonData(urls.immigrationUrl),
+      fetchJsonData(urls.emigrationUrl),
+      fetchJsonData(urls.geoJsonUrl)
+    );
+    migrationData = formatMigrationData(immigrationData, emigrationData);
+    sessionStorage.setItem("geoJsonData", JSON.stringify(geoJsonData));
+    sessionStorage.setItem("migrationData", JSON.stringify(migrationData));
+  }
+  return { geoJsonData, migrationData };
+}
 function formatMigrationData(immigrationData, emigrationData) {
   const immigrationValues = immigrationData.dataset.value;
   const immigrationIndexes =
-    immigrationData.dataset.dimension['Tuloalue'].category.index;
+    immigrationData.dataset.dimension["Tuloalue"].category.index;
   const emigrationValues = emigrationData.dataset.value;
   const emigrationIndexes =
-    emigrationData.dataset.dimension['Lähtöalue'].category.index;
+    emigrationData.dataset.dimension["Lähtöalue"].category.index;
 
   let formattedMigration = {};
   for (let [key, value] of Object.entries(immigrationIndexes)) {
     const regex = /^KU/;
-    const label = key.replace(regex, '');
+    const label = key.replace(regex, "");
     const emgIndex = emigrationIndexes[key];
     formattedMigration[label] = {
       immigration: immigrationValues[value],
@@ -65,15 +70,15 @@ function formatMigrationData(immigrationData, emigrationData) {
   return formattedMigration;
 }
 
-function drawMap(geoJsonData) {
-  var map = L.map('map').setView({ lon: 0, lat: 0 }, 2);
+function drawMap(geoJsonData, migrationData) {
+  const map = L.map("map").setView({ lon: 0, lat: 0 }, 2);
   L.tileLayer(`https://tile.openstreetmap.org/{z}/{x}/{y}.png`, {
     minZoom: -3,
     attribution:
       '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
-  let geoFeature = L.geoJson(geoJsonData, {
-    style: styleFunction,
+  const geoFeature = L.geoJson(geoJsonData, {
+    style: (feature) => styleFunction(feature, migrationData),
     onEachFeature: onEachFunction,
   }).addTo(map);
   map.fitBounds(geoFeature.getBounds());
@@ -84,22 +89,25 @@ function onEachFunction(feature, layer) {
   }
   if (feature.properties && feature.properties.kunta) {
     const kunta = feature.properties.kunta;
-    const migrationData = JSON.parse(sessionStorage.getItem('migrationData'));
+    const migrationData = JSON.parse(sessionStorage.getItem("migrationData"));
     const { immigration, emigration } = migrationData[kunta];
     const popUpTemplate = `<p>Positive migration: ${immigration}</p><p>Negative migration: ${emigration}</p>`;
     layer.bindPopup(popUpTemplate);
   }
 }
-function styleFunction(feature) {
-  if (feature.properties && feature.properties.kunta) {
-    const kunta = feature?.properties?.kunta;
-    const migrationData = JSON.parse(sessionStorage.getItem('migrationData'));
-    const { immigration, emigration } = migrationData[kunta];
+function styleFunction(feature, migrationData) {
+  console.log(feature.properties.kunta)
+  if (feature.properties?.kunta) {
+    const { immigration, emigration } = migrationData[feature.properties.kunta] || {};
     const hue = calcHue(immigration, emigration);
     return { color: `hsl(${hue},75%,50%)`, weight: 2 };
   }
+  return {
+    color: '#ccc',
+    weight: 1
+  }
 }
 function calcHue(posMig, negMig) {
-  const hue = Math.pow(posMig / negMig, 3) * 60;
-  return hue < 120 ? hue : 120;
+  const hue = Math.pow(posMig / (negMig || 1), 3) * 60;
+  return Math.min(hue,120);
 }
