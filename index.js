@@ -1,11 +1,11 @@
 "use strict";
 // URLs for fetching immigration, emigration, and geographical data
-const urls = {
-  immigrationUrl:
+const URLs = {
+  immigration:
     "https://statfin.stat.fi/PxWeb/sq/4bb2c735-1dc3-4c5e-bde7-2165df85e65f",
-  emigrationUrl:
+  emigration:
     "https://statfin.stat.fi/PxWeb/sq/944493ca-ea4d-4fd9-a75c-4975192f7b6e",
-  geoJsonUrl:
+  geoJson:
     "https://geo.stat.fi/geoserver/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=tilastointialueet:kunta4500k&outputFormat=json&srsName=EPSG:4326",
 };
 
@@ -53,9 +53,9 @@ async function getData() {
 
   // Fetch data if not available in session storage
   const [immigrationData, emigrationData, geoJson] = await Promise.all(
-    fetchJsonData(urls.immigrationUrl),
-    fetchJsonData(urls.emigrationUrl),
-    fetchJsonData(urls.geoJsonUrl)
+    fetchJsonData(URLs.immigration),
+    fetchJsonData(URLs.emigration),
+    fetchJsonData(URLs.geoJson)
   );
 
   // if data fetching fails set returned data entries to null
