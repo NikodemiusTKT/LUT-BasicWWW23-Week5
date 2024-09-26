@@ -26,6 +26,7 @@ async function fetchJsonData(url) {
     console.error(
       `Error occurred in fetch function | ${err.name}: ${err.message}`
     );
+    return null;
   }
 }
 async function fetchDataSources(urls) {
@@ -57,17 +58,15 @@ function formatMigrationData(immigrationData, emigrationData) {
   const emigrationIndexes =
     emigrationData.dataset.dimension["Lähtöalue"].category.index;
 
-  let formattedMigration = {};
-  for (let [key, value] of Object.entries(immigrationIndexes)) {
-    const regex = /^KU/;
-    const label = key.replace(regex, "");
+  Object.entries(immigrationIndexes).reduce((accumulator, [key, value]) => {
+    const label = key.replace(/^KU/, "");
     const emgIndex = emigrationIndexes[key];
-    formattedMigration[label] = {
+    accumulator[label] = {
       immigration: immigrationValues[value],
       emigration: emigrationValues[emgIndex],
     };
-  }
-  return formattedMigration;
+    return accumulator;
+  }, {});
 }
 
 function drawMap(geoJsonData, migrationData) {
@@ -96,18 +95,19 @@ function onEachFunction(feature, layer) {
   }
 }
 function styleFunction(feature, migrationData) {
-  console.log(feature.properties.kunta)
+  console.log(feature.properties.kunta);
   if (feature.properties?.kunta) {
-    const { immigration, emigration } = migrationData[feature.properties.kunta] || {};
+    const { immigration, emigration } =
+      migrationData[feature.properties.kunta] || {};
     const hue = calcHue(immigration, emigration);
     return { color: `hsl(${hue},75%,50%)`, weight: 2 };
   }
   return {
-    color: '#ccc',
-    weight: 1
-  }
+    color: "#ccc",
+    weight: 1,
+  };
 }
 function calcHue(posMig, negMig) {
   const hue = Math.pow(posMig / (negMig || 1), 3) * 60;
-  return Math.min(hue,120);
+  return Math.min(hue, 120);
 }
