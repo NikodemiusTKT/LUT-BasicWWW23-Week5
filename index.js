@@ -52,14 +52,14 @@ async function getData() {
   }
 
   // Fetch data if not available in session storage
-  const [immigrationData, emigrationData, geoJson] = await Promise.all(
+  const [immigrationData, emigrationData, geoJson] = await Promise.all([
     fetchJsonData(URLs.immigration),
     fetchJsonData(URLs.emigration),
-    fetchJsonData(URLs.geoJson)
-  );
+    fetchJsonData(URLs.geoJson),
+  ]);
 
   // if data fetching fails set returned data entries to null
-  if (!immigrationData || !emigrationData || !geoJsonData)
+  if (!immigrationData || !emigrationData || !geoJson)
     return { geoJsonData: null, migrationData: null };
 
   const formattedMigrationData = formatMigrationData(
