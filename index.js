@@ -29,12 +29,6 @@ async function fetchJsonData(url) {
     return null;
   }
 }
-async function fetchDataSources(urls) {
-  const promises = Object.values(urls).map((url) => fetchJsonData(url));
-  const results = await Promise.all(promises);
-  return results;
-}
-
 async function getData() {
   let geoJsonData = JSON.parse(sessionStorage.getItem("geoJsonData"));
   let migrationData = JSON.parse(sessionStorage.getItem("migrationData"));
@@ -78,18 +72,16 @@ function drawMap(geoJsonData, migrationData) {
   }).addTo(map);
   const geoFeature = L.geoJson(geoJsonData, {
     style: (feature) => styleFunction(feature, migrationData),
-    onEachFeature: onEachFunction,
+    onEachFeature: (feature,layer) => onEachFunction(feature,layer,migrationData),
   }).addTo(map);
   map.fitBounds(geoFeature.getBounds());
 }
-function onEachFunction(feature, layer) {
-  if (feature.properties && feature.properties.name) {
+function onEachFunction(feature, layer, migrationData) {
+  if (feature.properties?.name) {
     layer.bindTooltip(feature.properties.name).openTooltip();
   }
-  if (feature.properties && feature.properties.kunta) {
-    const kunta = feature.properties.kunta;
-    const migrationData = JSON.parse(sessionStorage.getItem("migrationData"));
-    const { immigration, emigration } = migrationData[kunta];
+  if (feature.properties?.kunta) {
+    const {immigration, emigration} = migrationData[feature.properties.kunta] || {immigration: 0, emigration: 0};
     const popUpTemplate = `<p>Positive migration: ${immigration}</p><p>Negative migration: ${emigration}</p>`;
     layer.bindPopup(popUpTemplate);
   }
