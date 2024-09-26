@@ -33,11 +33,15 @@ async function getData() {
   let geoJsonData = JSON.parse(sessionStorage.getItem("geoJsonData"));
   let migrationData = JSON.parse(sessionStorage.getItem("migrationData"));
   if (geoJsonData === null || migrationData === null) {
-    const [immigrationData, emigrationData, geoJsonData] = await Promise.All(
+    const [immigrationData, emigrationData, geoJsonData] = await Promise.all(
       fetchJsonData(urls.immigrationUrl),
       fetchJsonData(urls.emigrationUrl),
       fetchJsonData(urls.geoJsonUrl)
     );
+
+    if (!immigrationData || !emigrationData || !geoJsonData)
+      return { geoJsonData: null, migrationData: null };
+
     migrationData = formatMigrationData(immigrationData, emigrationData);
     sessionStorage.setItem("geoJsonData", JSON.stringify(geoJsonData));
     sessionStorage.setItem("migrationData", JSON.stringify(migrationData));
@@ -52,7 +56,7 @@ function formatMigrationData(immigrationData, emigrationData) {
   const emigrationIndexes =
     emigrationData.dataset.dimension["Lähtöalue"].category.index;
 
-  Object.entries(immigrationIndexes).reduce((accumulator, [key, value]) => {
+  return Object.entries(immigrationIndexes).reduce((accumulator, [key, value]) => {
     const label = key.replace(/^KU/, "");
     const emgIndex = emigrationIndexes[key];
     accumulator[label] = {
@@ -72,7 +76,8 @@ function drawMap(geoJsonData, migrationData) {
   }).addTo(map);
   const geoFeature = L.geoJson(geoJsonData, {
     style: (feature) => styleFunction(feature, migrationData),
-    onEachFeature: (feature,layer) => onEachFunction(feature,layer,migrationData),
+    onEachFeature: (feature, layer) =>
+      onEachFunction(feature, layer, migrationData),
   }).addTo(map);
   map.fitBounds(geoFeature.getBounds());
 }
@@ -81,13 +86,14 @@ function onEachFunction(feature, layer, migrationData) {
     layer.bindTooltip(feature.properties.name).openTooltip();
   }
   if (feature.properties?.kunta) {
-    const {immigration, emigration} = migrationData[feature.properties.kunta] || {immigration: 0, emigration: 0};
+    const { immigration, emigration } = migrationData[
+      feature.properties.kunta
+    ] || { immigration: 0, emigration: 0 };
     const popUpTemplate = `<p>Positive migration: ${immigration}</p><p>Negative migration: ${emigration}</p>`;
     layer.bindPopup(popUpTemplate);
   }
 }
 function styleFunction(feature, migrationData) {
-  console.log(feature.properties.kunta);
   if (feature.properties?.kunta) {
     const { immigration, emigration } =
       migrationData[feature.properties.kunta] || {};
